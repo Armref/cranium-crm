@@ -9,6 +9,8 @@ return array(
 	'basePath'=>dirname(__FILE__).DIRECTORY_SEPARATOR.'..',
 	'name'=>'CRaniuM CRM',
 
+	'modules'=>include(dirname(__FILE__).'/modules.php'),
+
 	// preloading 'log' component
 	'preload'=>array('log'),
 
@@ -61,8 +63,5 @@ return array(
 
 	// application-level parameters that can be accessed
 	// using Yii::app()->params['paramName']
-	'params'=>array(
-		// this is used in contact page
-		'adminEmail'=>'webmaster@craniumcrm.com',
-	),
+	'params'=>include(dirname(__FILE__).'/params.php'),
 );
