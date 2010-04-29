@@ -179,7 +179,7 @@ class CrudController extends Controller
 		$model=new $this->modelName('search');
 		if(isset($_GET[$this->modelName]))
 			$model->attributes=$_GET[$this->modelName];
-#var_dump($GLOBALS);exit;
+
 		$this->render('/crud/admin',array(
 			'model'=>$model,
 		));
