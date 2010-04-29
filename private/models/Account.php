@@ -42,7 +42,7 @@ class Account extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('account_name, company_id, lft, rgt, created, modified', 'required'),
+			array('account_name, company_id, lft, rgt', 'required'),
 			array('account_name', 'length', 'max'=>128),
 			array('company_id, lft, rgt', 'length', 'max'=>20),
 			array('company_num', 'length', 'max'=>100),

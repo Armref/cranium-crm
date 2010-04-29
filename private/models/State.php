@@ -40,7 +40,7 @@ class State extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('country_id, state, state_abbr, created, modified', 'required'),
+			array('country_id, state, state_abbr', 'required'),
 			array('country_id', 'length', 'max'=>20),
 			array('state', 'length', 'max'=>64),
 			array('state_abbr', 'length', 'max'=>2),

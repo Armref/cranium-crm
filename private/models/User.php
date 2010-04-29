@@ -11,7 +11,6 @@ class User extends Model
 	 * @var string $username
 	 * @var string $password
 	 * @var string $person_id
-	 * @var string $status_id
 	 * @var string $created
 	 * @var string $modified
 	 */
@@ -33,6 +32,30 @@ class User extends Model
 		return 'user';
 	}
 
+	protected function beforeSave()
+	{
+		$passwordDiffers = true;
+		/**
+		 * If existing user, check password
+		 */
+		if(!$this->getIsNewRecord())
+		{
+			if(isset($this->oldAttributes['password']) && strcmp($this->oldAttributes['password'],$this->password)==0)
+			{
+				$passwordDiffers = false;
+			}
+		}
+
+		if($passwordDiffers && !empty($this->password))
+		{
+			$this->password = $this->hashPassword($this->password);
+		}elseif(!empty($this->oldAttributes['password'])){
+			$this->password = $this->oldAttributes['password'];
+		}
+
+		return parent::beforeSave();
+	}
+
 	/**
 	 * @return array validation rules for model attributes.
 	 */
@@ -41,13 +64,15 @@ class User extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('username, password, person_id, status_id, created, modified', 'required'),
+			array('username, person_id', 'required'),
+			array('password', 'required', 'on'=>'create'),
 			array('username', 'length', 'max'=>32),
-			array('password', 'length', 'max'=>250),
-			array('person_id, status_id', 'length', 'max'=>20),
+			array('username', 'unique'),
+			array('password', 'length', 'max'=>32),
+			array('person_id', 'length', 'max'=>20),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.
-			array('id, username, password, person_id, status_id, created, modified', 'safe', 'on'=>'search'),
+			array('id, username, person_id, created, modified', 'safe', 'on'=>'search'),
 		);
 	}
 
@@ -61,7 +86,6 @@ class User extends Model
 		return array(
 			'systemLogs' => array(self::HAS_MANY, 'SystemLog', 'user_id'),
 			'person' => array(self::BELONGS_TO, 'Person', 'person_id'),
-			'status' => array(self::BELONGS_TO, 'UserStatus', 'status_id'),
 		);
 	}
 
@@ -74,8 +98,8 @@ class User extends Model
 			'id' => 'ID',
 			'username' => 'Username',
 			'password' => 'Password',
+			#'salt' => 'Salt',
 			'person_id' => 'Person',
-			'status_id' => 'Status',
 			'created' => 'Created',
 			'modified' => 'Modified',
 		);
@@ -96,18 +120,24 @@ class User extends Model
 
 		$criteria->compare('username',$this->username,true);
 
-		$criteria->compare('password',$this->password,true);
-
 		$criteria->compare('person_id',$this->person_id,true);
-
-		$criteria->compare('status_id',$this->status_id,true);
 
 		$criteria->compare('created',$this->created,true);
 
 		$criteria->compare('modified',$this->modified,true);
 
 		return new CActiveDataProvider(get_class($this), array(
-			'criteria'=>$criteria,
+				'criteria'=>$criteria,
 		));
+	}
+
+	public function validatePassword($password)
+	{
+		return $this->hashPassword($password/*, $this->salt*/)===$this->password;
+	}
+
+	public function hashPassword($password/*, $salt*/)
+	{
+		return hash('sha512', /*$salt . */$password);
 	}
 }

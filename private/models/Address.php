@@ -46,7 +46,7 @@ class Address extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('address_type_id, street, country_id, state_id, county_id, city_id, postal_code_id, created, modified', 'required'),
+			array('address_type_id, street, country_id, state_id, county_id, city_id, postal_code_id', 'required'),
 			array('address_type_id, country_id, state_id, county_id, city_id, postal_code_id', 'length', 'max'=>20),
 			array('street_num', 'length', 'max'=>16),
 			array('street, street2', 'length', 'max'=>255),

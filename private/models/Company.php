@@ -39,7 +39,7 @@ class Company extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('company_name, created, modified', 'required'),
+			array('company_name', 'required'),
 			array('company_name', 'length', 'max'=>128),
 			array('company_code', 'length', 'max'=>10),
 			// The following rule is used by search().

@@ -39,7 +39,7 @@ class Country extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('country, country_abbr, created, modified', 'required'),
+			array('country, country_abbr', 'required'),
 			array('country', 'length', 'max'=>128),
 			array('country_abbr', 'length', 'max'=>2),
 			// The following rule is used by search().

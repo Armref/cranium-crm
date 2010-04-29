@@ -34,6 +34,11 @@ class Person extends Model
 		return 'person';
 	}
 
+	public function displayFields()
+	{
+		return array('first_name', 'last_name');
+	}
+
 	/**
 	 * @return array validation rules for model attributes.
 	 */
@@ -42,7 +47,7 @@ class Person extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('first_name, last_name, created, modified', 'required'),
+			array('first_name, last_name', 'required'),
 			array('first_name, middle_name, last_name', 'length', 'max'=>50),
 			array('title', 'length', 'max'=>4),
 			array('gender', 'length', 'max'=>6),

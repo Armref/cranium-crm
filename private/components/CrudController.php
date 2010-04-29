@@ -3,6 +3,26 @@
 class CrudController extends Controller
 {
 	/**
+	 * @var CActiveRecord the currently loaded data model instance.
+	 */
+	private $_model;
+
+	public function init()
+	{
+		parent::init();
+		if(empty($this->modelName))
+		{
+			throw new CHttpException(404,'The model for this action does not exist.');
+		}#var_dump($this->modelUtil()->getForeignKeys());exit;
+	}
+
+	public function modelUtil()
+	{
+		$_model = $this->modelName;
+		return $_model::model();
+	}
+
+	/**
 	 * @return array action filters
 	 */
 	public function filters()
@@ -30,7 +50,8 @@ class CrudController extends Controller
 			),
 			array('allow', // allow admin user to perform 'admin' and 'delete' actions
 				'actions'=>array('admin','delete'),
-				'users'=>array('admin'),
+				#'users'=>array('admin'),
+				'users'=>array('@'),
 			),
 			array('deny',  // deny all users
 				'users'=>array('*'),
@@ -43,7 +64,7 @@ class CrudController extends Controller
 	 */
 	public function actionView()
 	{
-		$this->render('view',array(
+		$this->render('/crud/view',array(
 			'model'=>$this->loadModel(),
 		));
 	}
@@ -54,23 +75,33 @@ class CrudController extends Controller
 	 */
 	public function actionCreate()
 	{
-		if(($_model = $this->modelName))
-		{
-			$model=new $_model();
-			if(isset($_POST[$_model]))
-			{
-				$model->attributes=$_POST[$_model];
-				if($model->save())
-					$this->redirect(array('view','id'=>$model->id));
-			}
+		$model=new $this->modelName();
+		$this->performAjaxValidation($model);
 
-			$this->render('create',array(
-				'model'=>$model,
-			));
-		}else
+		if(isset($_POST[$this->modelName]))
 		{
-			throw new CHttpException(404,'The model for this action does not exist.');
+			$model->attributes=$_POST[$this->modelName];
+
+			$transaction=$model->dbConnection->beginTransaction();
+			try
+			{
+				if($model->save())
+				{
+					$transaction->commit();
+					$this->redirect(array('view','id'=>$model->id));
+				}
+			}
+			catch(Exception $e)
+			{
+				$transaction->rollBack();
+				echo 'error transaction';
+				print_r($e);exit;
+			}
 		}
+
+		$this->render('/crud/create',array(
+			'model'=>$model,
+		));
 	}
 
 	/**
@@ -80,15 +111,27 @@ class CrudController extends Controller
 	public function actionUpdate()
 	{
 		$model=$this->loadModel();
-		$_model = $this->modelName;
-		if(isset($_POST[$_model]))
+		if(isset($_POST[$this->modelName]))
 		{
-			$model->attributes=$_POST[$_model];
-			if($model->save())
-				$this->redirect(array('view','id'=>$model->id));
+			$model->attributes=$_POST[$this->modelName];
+
+			$transaction=$model->dbConnection->beginTransaction();
+			try
+			{
+				if($model->save())
+				{
+					$transaction->commit();
+					$this->redirect(array('view','id'=>$model->id));
+				}
+			}
+			catch(Exception $e)
+			{
+				$transaction->rollBack();
+				echo 'error transaction';
+			}
 		}
 
-		$this->render('update',array(
+		$this->render('/crud/update',array(
 			'model'=>$model,
 		));
 	}
@@ -117,14 +160,13 @@ class CrudController extends Controller
 	 */
 	public function actionIndex()
 	{
-		$_model = $this->modelName;
-		$dataProvider=new CActiveDataProvider($_model, array(
+		$dataProvider=new CActiveDataProvider($this->modelName, array(
 				'pagination'=>array(
 					'pageSize'=>$this->pageSize,
 				),
 		));
 
-		$this->render('index',array(
+		$this->render('/crud/index',array(
 			'dataProvider'=>$dataProvider,
 		));
 	}
@@ -134,15 +176,12 @@ class CrudController extends Controller
 	 */
 	public function actionAdmin()
 	{
-		$_model = $this->modelName;
-		$dataProvider=new CActiveDataProvider($_model, array(
-				'pagination'=>array(
-					'pageSize'=>$this->pageSize,
-				),
-		));
-
-		$this->render('admin',array(
-			'dataProvider'=>$dataProvider,
+		$model=new $this->modelName('search');
+		if(isset($_GET[$this->modelName]))
+			$model->attributes=$_GET[$this->modelName];
+#var_dump($GLOBALS);exit;
+		$this->render('/crud/admin',array(
+			'model'=>$model,
 		));
 	}
 
@@ -154,11 +193,239 @@ class CrudController extends Controller
 	{
 		if($this->_model===null)
 		{
-			if(isset($_GET['id']) && ($_model = $this->modelName))
-				$this->_model=$_model::model()->findbyPk($_GET['id']);
+			if(isset($_GET['id']))
+				$this->_model=$this->modelUtil()->findbyPk($_GET['id']);
 			if($this->_model===null)
 				throw new CHttpException(404,'The requested page does not exist.');
 		}
 		return $this->_model;
+	}
+
+	/**
+	 * Performs the AJAX validation.
+	 * @param CModel the model to be validated
+	 */
+	protected function performAjaxValidation($model)
+	{
+		$formName = $this->modelName . '-form';
+		if(isset($_POST['ajax']) && $_POST['ajax']===$formName)
+		{
+			echo CActiveForm::validate($model);
+			Yii::app()->end();
+		}
+	}
+
+	/**
+	 * @todo Make this method MUCH MUCH MUCH more elegant
+	 */
+	public function generateField($model, $column, $form = null, $type = 'form')
+	{
+		$label = '';
+		$error = '';
+		switch($type)
+		{
+			case 'form':
+				if(!empty($form))
+				{
+					$label = $form->labelEx($model, $column->name);
+					$error = $form->error($model, $column->name);
+				}else
+				{
+					$label = CHtml::activeLabelEx($model, $column->name);
+					$error = CHtml::activeError($model, $column->name);
+				}
+				break;
+			case 'search':
+				if(!empty($form))
+				{
+					$label = $form->label($model, $column->name);
+				}else
+				{
+					$label = CHtml::activeLabel($model, $column->name);
+				}
+				break;
+		}
+
+		$locked = $model->lockedElements();
+
+		if(array_key_exists($column->name, $locked))
+		{
+			if(!empty($locked[$column->name]['display']) && isset($model->{$column->name}) && !is_null($model->{$column->name}))
+			{
+				return $label . ': ' . $model->{$column->name} . $error;
+			}else
+			{
+				if(!empty($form))
+				{
+					return $form->hiddenField($model, $column->name);
+				}else
+				{
+					return CHtml::activeHiddenField($model, $column->name);
+				}
+			}
+		}
+
+		if($column->isForeignKey)
+		{
+			/**
+			 * ForeignKey stuff here
+			 */
+			$foreignModel = '';
+			foreach($model->relations() AS $relKey=>$relArray)
+			{
+				if(strcmp($relArray[2], $column->name)==0)
+				{
+					$foreignModel = $relArray[1];
+					break;
+				}
+			}
+			$listData = array();
+			if(!empty($foreignModel))
+			{
+				$foreignColumns = $foreignModel::model()->getColumns();
+				$fkId = $model->foreignKeys[$column->name][1];
+				if(empty($foreignModel::model()->displayFields))
+				{
+					$fkName = array( $this->guessNameColumn($foreignColumns, $fkId) );
+				}else
+				{
+					$fkName = $foreignModel::model()->displayFields;
+				}
+				$fkName = 'CONCAT(`' . implode('`, " ", `', $fkName) . '`) AS modelDisplayField';
+				$cond = array('select'=>array($fkId, $fkName));
+				$listData = CHtml::listData($foreignModel::model()->findAll($cond), $fkId, 'modelDisplayField');
+			}
+
+			if(!empty($form))
+			{
+				return $label . $form->dropDownList($model, $column->name, $listData) . $error;
+			}else
+			{
+				return $label . CHtml::activeDropDownList($model, $column->name, $listData) . $error;
+			}
+		}else
+		{
+			if($column->type==='boolean' || ($column->type == 'integer' && $column->size == 1))
+			{
+				if(!empty($form))
+				{
+					return $label . $form->checkBox($model, $column->name) . $error;
+				}else
+				{
+					return $label . CHtml::activeCheckBox($model, $column->name) . $error;
+				}
+			}
+			else if(stripos($column->dbType,'text')!==false)
+			{
+				if(!empty($form))
+				{
+					return $label . $form->textArea($model, $column->name, array('rows'=>6, 'cols'=>50)) . $error;
+				}else
+				{
+					return $label . CHtml::activeTextArea($model, $column->name, array('rows'=>6, 'cols'=>50)) . $error;
+				}
+			}
+			else
+			{
+				if(preg_match('/^(password|pass|passwd|passcode)$/i',$column->name))
+				{
+					$inputField='passwordField';
+					$model->{$column->name} = '';
+				}else
+				{
+					$inputField='textField';
+				}
+
+				if($column->type!=='string' || $column->size===null)
+				{
+					if(!empty($form))
+					{
+						return $label . $form->{$inputField}($model, $column->name) . $error;
+					}else
+					{
+						$inputField = 'active' . ucfirst($inputField);
+						return $label . CHtml::$inputField($model, $column->name) . $error;
+					}
+				}
+				else
+				{
+					switch($column->dbType)
+					{
+						case 'date':
+						case 'timestamp':
+						case 'datetime':
+						case 'time':
+							break;
+						case 'year':
+							$listData = range(date('Y'), 1900);
+							$listData = array_combine($listData, $listData);
+
+							if(!empty($form))
+							{
+								return $label . $form->dropDownList($model, $column->name, $listData) . $error;
+							}else
+							{
+								return $label . CHtml::activeDropDownList($model, $column->name, $listData) . $error;
+							}
+
+							break;
+						default:
+							if(preg_match('/^enum\((.+)\)$/', $column->dbType, $match))
+							{
+								$listData = str_getcsv($match[1], ',', "'");
+								$listData = array_combine($listData, $listData);
+
+								if(!empty($form))
+								{
+									return $label . $form->dropDownList($model, $column->name, $listData) . $error;
+								}else
+								{
+									return $label . CHtml::activeDropDownList($model, $column->name, $listData) . $error;
+								}
+							}
+							break;
+					}
+
+					if(($size=$maxLength=$column->size)>60)
+						$size=60;
+					if(!empty($form))
+					{
+						return $label . $form->{$inputField}($model, $column->name, array('size'=>$size,'maxlength'=>$maxLength)) . $error;
+					}else
+					{
+						$inputField = 'active' . ucfirst($inputField);
+						return $label . CHtml::$inputField($model, $column->name, array('size'=>$size,'maxlength'=>$maxLength)) . $error;
+					}
+				}
+			}
+		}
+	}
+
+	public function guessNameColumn($columns, $fallback = 'id')
+	{
+		foreach($columns as $column)
+		{
+			if(stripos($column->name,'name')!==false)
+				return $column->name;
+		}
+		foreach($columns as $column)
+		{
+			if(stripos($column->name,'title')!==false)
+				return $column->name;
+		}
+		foreach($columns as $column)
+		{
+			if($column->type === 'string')
+			{
+				if(!in_array(Model::determineRealDbType($column), array('integer','double')))
+					return $column->name;
+			}
+		}
+		foreach($columns as $column)
+		{
+			if($column->isPrimaryKey)
+				return $column->name;
+		}
+		return $fallback;
 	}
 }

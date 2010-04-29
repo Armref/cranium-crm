@@ -9,7 +9,7 @@ class Controller extends CController
 	 * @var string the default layout for the controller view. Defaults to 'application.views.layouts.column1',
 	 * meaning using a single column layout. See 'protected/views/layouts/column1.php'.
 	 */
-	public $layout='application.views.layouts.column1';
+	public $layout='application.views.layouts.column2';
 	/**
 	 * @var array context menu items. This property will be assigned to {@link CMenu::items}.
 	 */
@@ -43,6 +43,8 @@ class Controller extends CController
 	
 	public function init()
 	{
+		Yii::import('application.vendors.cake_libs.*');
+
 		$this->_controllerName = get_class($this);
 		if($this->issetClassConst('PAGESIZE'))
 		{
@@ -108,5 +110,23 @@ class Controller extends CController
 	public function getModelName()
 	{
 		return $this->_modelName ?: false;
+	}
+
+	public function getSingularName()
+	{
+		return $this->singularize(ucwords($this->id));
+	}
+
+	public function getPluralName()
+	{
+		return $this->pluralize(ucwords($this->id));
+	}
+
+	public function pluralize($string) {
+		return Inflector::pluralize($string);
+	}
+
+	public function singularize($string) {
+		return Inflector::singularize($string);
 	}
 }

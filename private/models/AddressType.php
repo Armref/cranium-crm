@@ -38,7 +38,7 @@ class AddressType extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('address_type, created, modified', 'required'),
+			array('address_type', 'required'),
 			array('address_type', 'length', 'max'=>32),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.

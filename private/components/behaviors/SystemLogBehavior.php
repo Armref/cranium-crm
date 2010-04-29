@@ -16,12 +16,12 @@ class SystemLogBehavior extends CActiveRecordBehavior
 
 	private function _notSelf($modelName=null)
 	{
-		if(empty($this->model))
+		if(empty($modelName))
 		{
-			$modelName = get_class($this->getOwner());
+			$modelName = $this->model;
 		}
 
-		return !in_array($modelName, array($this->logModel,$this->logChangeModel));
+		return !in_array($modelName, array($this->systemLog,$this->systemLogChange));
 	}
 
 	public function getModel()
@@ -44,6 +44,34 @@ class SystemLogBehavior extends CActiveRecordBehavior
 		return $this->_controller;
 	}
 
+	public function getModelId()
+	{
+		$systemModel = $this->systemModel;
+		$modelObject = $systemModel::model()->findByAttributes(array('model'=>$this->model));
+		if(empty($modelObject))
+		{
+			$modelObject = new $systemModel;
+			$modelObject->model = $this->model;
+			$modelObject->save();
+		}
+
+		return $modelObject->getPrimaryKey();
+	}
+
+	public function getControllerId()
+	{
+		$systemController = $this->systemController;
+		$controllerObject = $systemController::model()->findByAttributes(array('controller'=>$this->controller));
+		if(empty($controllerObject))
+		{
+			$controllerObject = new $systemController;
+			$controllerObject->controller = $this->controller;
+			$controllerObject->save();
+		}
+
+		return $controllerObject->getPrimaryKey();
+	}
+
 	public function afterSave($event)
 	{
 		$modelKey = $this->getOwner()->getPrimaryKey();
@@ -55,12 +83,9 @@ class SystemLogBehavior extends CActiveRecordBehavior
 
 			$diffAttributes = array_diff_assoc($newAttributes, $oldAttributes);
 
-			$systemController = $this->systemController;
-			$systemModel = $this->systemModel;
-
-			$log = new $this->logModel;
-			$log->controller_id = $systemController::model()->findByAttributes(array('controller'=>$this->controller))->getPrimaryKey();
-			$log->model_id = $systemModel::model()->findByAttributes(array('model'=>$this->model))->getPrimaryKey();
+			$log = new $this->systemLog;
+			$log->controller_id = $this->controllerId;
+			$log->model_id = $this->modelId;
 			$log->user_id = Yii::app()->user->id;
 			$log->model_pk_id = $modelKey;
 			$log->event = ($this->getOwner()->isNewRecord ? 'create' : 'update');
@@ -71,10 +96,10 @@ class SystemLogBehavior extends CActiveRecordBehavior
 			{
 				foreach($diffAttributes AS $k=>$v)
 				{
-					$change = new $this->logModelChange;
-					$change->action_log_id = $log->id;
-					$change->field_name = $k;
-					$change->field_value = $v;
+					$change = new $this->systemLogChange;
+					$change->system_log_id = $log->id;
+					$change->column = $k;
+					$change->value = $v;
 					$change->save();
 				}
 			}
@@ -87,12 +112,9 @@ class SystemLogBehavior extends CActiveRecordBehavior
 
 		if(!is_array($modelKey) && $this->_notSelf())
 		{
-			$systemController = $this->systemController;
-			$systemModel = $this->systemModel;
-
-			$log = new $this->logModel;
-			$log->controller_id = $systemController::model()->findByAttributes(array('controller'=>$this->controller))->getPrimaryKey();
-			$log->model_id = $systemModel::model()->findByAttributes(array('model'=>$this->model))->getPrimaryKey();
+			$log = new $this->systemLog;
+			$log->controller_id = $this->controllerId;
+			$log->model_id = $this->modelId;
 			$log->user_id = Yii::app()->user->id;
 			$log->model_pk_id = $modelKey;
 			$log->event = 'delete';

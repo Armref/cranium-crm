@@ -38,7 +38,8 @@ class SystemController extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('controller, created, modified', 'required'),
+			array('controller', 'required'),
+			array('controller', 'unique'),
 			array('controller', 'length', 'max'=>64),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.

@@ -43,7 +43,7 @@ class SystemLog extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('controller_id, model_id, user_id, model_pk_id, event, source, created, modified', 'required'),
+			array('controller_id, model_id, user_id, model_pk_id, event, source', 'required'),
 			array('controller_id, model_id, user_id, model_pk_id', 'length', 'max'=>20),
 			array('event', 'length', 'max'=>6),
 			array('source', 'length', 'max'=>3),

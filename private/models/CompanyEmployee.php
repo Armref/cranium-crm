@@ -42,7 +42,7 @@ class CompanyEmployee extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('person_id, company_id, position, lft, rgt, created, modified', 'required'),
+			array('person_id, company_id, position, lft, rgt', 'required'),
 			array('person_id, company_id, lft, rgt', 'length', 'max'=>20),
 			array('position', 'length', 'max'=>128),
 			// The following rule is used by search().

@@ -41,7 +41,7 @@ class City extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('country_id, state_id, county_id, city, created, modified', 'required'),
+			array('country_id, state_id, county_id, city', 'required'),
 			array('country_id, state_id, county_id', 'length', 'max'=>20),
 			array('city', 'length', 'max'=>64),
 			// The following rule is used by search().

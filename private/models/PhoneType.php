@@ -38,7 +38,7 @@ class PhoneType extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('phone_type, created, modified', 'required'),
+			array('phone_type', 'required'),
 			array('phone_type', 'length', 'max'=>32),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.

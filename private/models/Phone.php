@@ -41,7 +41,7 @@ class Phone extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('phone_type_id, area_code, phone_number, created, modified', 'required'),
+			array('phone_type_id, area_code, phone_number', 'required'),
 			array('area_code', 'numerical', 'integerOnly'=>true),
 			array('phone_type_id', 'length', 'max'=>20),
 			array('phone_number', 'length', 'max'=>7),

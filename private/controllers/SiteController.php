@@ -3,6 +3,43 @@
 class SiteController extends Controller
 {
 	/**
+	 * @return array action filters
+	 */
+	public function filters()
+	{
+		return array(
+			'accessControl', // perform access control for CRUD operations
+		);
+	}
+
+	/**
+	 * Specifies the access control rules.
+	 * This method is used by the 'accessControl' filter.
+	 * @return array access control rules
+	 */
+	public function accessRules()
+	{
+		return array(
+			array('allow',  // allow all users to perform 'index', ... actions
+				'actions'=>array('index','error','contact','login'),
+				'users'=>array('*'),
+			),
+			array('allow', // allow authenticated user to perform 'logout' action
+				'actions'=>array('logout'),
+				'users'=>array('@'),
+			),
+			array('allow', // allow admin user to perform 'admin' action
+				'actions'=>array('admin'),
+				#'users'=>array('admin'),
+				'users'=>array('@'),
+			),
+			array('deny',  // deny all users
+				'users'=>array('*'),
+			),
+		);
+	}
+
+	/**
 	 * Declares class-based actions.
 	 */
 	public function actions()
@@ -44,6 +81,28 @@ class SiteController extends Controller
 	    	else
 	        	$this->render('error', $error);
 	    }
+	}
+
+	public function actionAdmin()
+	{
+        // Get list of controllers
+        $controllerList = scandir(Yii::getPathOfAlias('application.controllers'));
+        // Remove .
+        array_shift($controllerList);
+        // Remove ..
+        array_shift($controllerList);
+
+        $controllers = array();
+        foreach($controllerList AS $k=>$v) {
+            $clink = $cname = preg_split('/(?<=[a-z])(?=[A-Z])/', str_replace('Controller.php', '', basename($v)));
+			if($clink[0] == 'Site')
+				continue;
+			
+            $clink[0] = strtolower($clink[0]);
+            $controllers[implode('', $clink)] = Inflector::pluralize(implode(' ', $cname));
+        }
+
+        $this->render('admin', array('controllers'=>$controllers));
 	}
 
 	/**

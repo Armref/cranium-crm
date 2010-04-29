@@ -44,7 +44,7 @@ class PostalCode extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('country_id, state_id, county_id, city_id, postal_code, created, modified', 'required'),
+			array('country_id, state_id, county_id, city_id, postal_code', 'required'),
 			array('country_id, state_id, county_id, city_id', 'length', 'max'=>20),
 			array('postal_code', 'length', 'max'=>15),
 			array('latitude, longitude', 'length', 'max'=>18),
