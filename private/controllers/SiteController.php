@@ -87,14 +87,17 @@ class SiteController extends Controller
 	{
         // Get list of controllers
         $controllerList = scandir(Yii::getPathOfAlias('application.controllers'));
-        // Remove .
-        array_shift($controllerList);
-        // Remove ..
-        array_shift($controllerList);
 
         $controllers = array();
-        foreach($controllerList AS $k=>$v) {
-            $clink = $cname = preg_split('/(?<=[a-z])(?=[A-Z])/', str_replace('Controller.php', '', basename($v)));
+        foreach($controllerList AS $file) {
+			/**
+			 * If . is first character, should be hidden file
+			 */
+			if(strpos($file, '.')==0)
+			{
+				continue;
+			}
+            $clink = $cname = preg_split('/(?<=[a-z])(?=[A-Z])/', str_replace('Controller.php', '', basename($file)));
 			if($clink[0] == 'Site')
 				continue;
 			
