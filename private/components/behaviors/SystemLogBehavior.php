@@ -3,6 +3,8 @@
 /**
  * @todo Add support for composite primary key
  * @todo Replace hard-coded "web" source w/ accurate source
+ * @todo Consider handling timestamps within the behavior
+ * @todo Possibly ignore timestamp columns when saving records, as they would theoretically be redundant
  */
 class SystemLogBehavior extends CActiveRecordBehavior
 {
