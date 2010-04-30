@@ -1,7 +1,7 @@
 <?php
 $this->breadcrumbs=array(
 	$this->pluralName=>array('index'),
-	$model->id,
+	$model->displayLabel(),
 );
 
 $this->menu=array(

@@ -28,6 +28,53 @@ class Model extends CActiveRecord
 		return $this->tableSchema->primaryKey;
 	}
 
+	public function displayLabel()
+	{
+		$displayCols = $this->displayColumns();
+
+		$return = array();
+		foreach($displayCols AS $column)
+		{
+			$return[] = $this->$column;
+		}
+
+		return implode(' ', $return);
+	}
+
+	public function displayColumns($fallback = 'id')
+	{
+		$displayFields = $this->displayFields();
+		if(!empty($displayFields))
+		{
+			return $this->displayFields();
+		}
+		
+		foreach($this->columns as $column)
+		{
+			if(stripos($column->name,'name')!==false)
+				return array($column->name);
+		}
+		foreach($this->columns as $column)
+		{
+			if(stripos($column->name,'title')!==false)
+				return array($column->name);
+		}
+		foreach($this->columns as $column)
+		{
+			if($column->type === 'string')
+			{
+				if(!in_array($this->determineRealDbType($column), array('integer','double')))
+					return array($column->name);
+			}
+		}
+		foreach($this->columns as $column)
+		{
+			if($column->isPrimaryKey)
+				return array($column->name);
+		}
+		return array($fallback);
+	}
+
 	/**
 	 * This is MySQL specific
 	 *

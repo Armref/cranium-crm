@@ -284,14 +284,7 @@ class CrudController extends Controller
 			{
 				$foreignColumns = $foreignModel::model()->getColumns();
 				$fkId = $model->foreignKeys[$column->name][1];
-				if(empty($foreignModel::model()->displayFields))
-				{
-					$fkName = array( $this->guessNameColumn($foreignColumns, $fkId) );
-				}else
-				{
-					$fkName = $foreignModel::model()->displayFields;
-				}
-				$fkName = 'CONCAT(`' . implode('`, " ", `', $fkName) . '`) AS modelDisplayField';
+				$fkName = 'CONCAT(`' . implode('`, " ", `', $foreignModel::model()->displayColumns($fkId)) . '`) AS modelDisplayField';
 				$cond = array('select'=>array($fkId, $fkName));
 				$listData = CHtml::listData($foreignModel::model()->findAll($cond), $fkId, 'modelDisplayField');
 			}
@@ -399,33 +392,5 @@ class CrudController extends Controller
 				}
 			}
 		}
-	}
-
-	public function guessNameColumn($columns, $fallback = 'id')
-	{
-		foreach($columns as $column)
-		{
-			if(stripos($column->name,'name')!==false)
-				return $column->name;
-		}
-		foreach($columns as $column)
-		{
-			if(stripos($column->name,'title')!==false)
-				return $column->name;
-		}
-		foreach($columns as $column)
-		{
-			if($column->type === 'string')
-			{
-				if(!in_array(Model::determineRealDbType($column), array('integer','double')))
-					return $column->name;
-			}
-		}
-		foreach($columns as $column)
-		{
-			if($column->isPrimaryKey)
-				return $column->name;
-		}
-		return $fallback;
 	}
 }
