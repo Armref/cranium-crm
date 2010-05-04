@@ -121,7 +121,7 @@ CREATE TABLE `company` (
   `created` datetime NOT NULL,
   `modified` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `company_address` */
 
@@ -213,6 +213,18 @@ CREATE TABLE `county` (
   CONSTRAINT `FK_county_country` FOREIGN KEY (`country_id`) REFERENCES `country` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+/*Table structure for table `email_address` */
+
+DROP TABLE IF EXISTS `email_address`;
+
+CREATE TABLE `email_address` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `email_address` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `created` datetime NOT NULL,
+  `modified` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 /*Table structure for table `person` */
 
 DROP TABLE IF EXISTS `person`;
@@ -227,7 +239,7 @@ CREATE TABLE `person` (
   `created` datetime NOT NULL,
   `modified` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `person_address` */
 
@@ -240,6 +252,19 @@ CREATE TABLE `person_address` (
   KEY `FK_address_person` (`address_id`),
   CONSTRAINT `FK_address_person` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `FK_person_address` FOREIGN KEY (`person_id`) REFERENCES `person` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+/*Table structure for table `person_email_address` */
+
+DROP TABLE IF EXISTS `person_email_address`;
+
+CREATE TABLE `person_email_address` (
+  `person_id` bigint(20) unsigned NOT NULL,
+  `email_address_id` bigint(20) unsigned NOT NULL,
+  PRIMARY KEY (`person_id`,`email_address_id`),
+  KEY `FK_email_address_person` (`email_address_id`),
+  CONSTRAINT `FK_email_address_person` FOREIGN KEY (`email_address_id`) REFERENCES `email_address` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `FK_person_email_address` FOREIGN KEY (`person_id`) REFERENCES `person` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `person_phone` */
@@ -336,7 +361,7 @@ CREATE TABLE `system_controller` (
   `created` datetime NOT NULL,
   `modified` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `system_log` */
 
@@ -359,7 +384,7 @@ CREATE TABLE `system_log` (
   CONSTRAINT `FK_system_log_model` FOREIGN KEY (`model_id`) REFERENCES `system_model` (`id`) ON DELETE NO ACTION ON UPDATE CASCADE,
   CONSTRAINT `FK_system_log_controller` FOREIGN KEY (`controller_id`) REFERENCES `system_controller` (`id`) ON DELETE NO ACTION ON UPDATE CASCADE,
   CONSTRAINT `FK_system_log_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE NO ACTION ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1256 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `system_log_change` */
 
@@ -373,7 +398,7 @@ CREATE TABLE `system_log_change` (
   PRIMARY KEY (`id`),
   KEY `FK_system_log_change` (`system_log_id`),
   CONSTRAINT `FK_system_log_change` FOREIGN KEY (`system_log_id`) REFERENCES `system_log` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `system_model` */
 
@@ -385,7 +410,7 @@ CREATE TABLE `system_model` (
   `created` datetime NOT NULL,
   `modified` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `user` */
 
@@ -401,7 +426,7 @@ CREATE TABLE `user` (
   PRIMARY KEY (`id`),
   KEY `FK_user_person` (`person_id`),
   CONSTRAINT `FK_user_person` FOREIGN KEY (`person_id`) REFERENCES `person` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Table structure for table `web_address` */
 
