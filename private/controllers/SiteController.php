@@ -103,6 +103,7 @@ class SiteController extends Controller
 			
             $clink[0] = strtolower($clink[0]);
             $controllers[implode('', $clink)] = Inflector::pluralize(implode(' ', $cname));
+			asort($controllers);
         }
 
         $this->render('admin', array('controllers'=>$controllers));

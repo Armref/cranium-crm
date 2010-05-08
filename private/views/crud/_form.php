@@ -1,7 +1,7 @@
 <div class="form">
 
 <?php $form=$this->beginWidget('CActiveForm', array(
-	'id'=>'account-form',
+	'id'=>$this->id . '-form',
 	'enableAjaxValidation'=>false,
 )); ?>
 
@@ -9,20 +9,7 @@
 
 	<?php echo $form->errorSummary($model); ?>
 
-	<?php
-	foreach($this->modelUtil()->columns AS $column)
-	{
-		if($column->isPrimaryKey)
-		{
-			continue;
-		}
-		?>
-	<div class="row">
-		<?php echo $this->generateField($model, $column, $form); ?>
-	</div>
-		<?php
-	}
-	?>
+	<?php echo $this->renderPartial('/crud/_formElements', array('model'=>$model, 'form'=>$form)); ?>
 
 	<div class="row buttons">
 		<?php echo CHtml::submitButton($model->isNewRecord ? 'Create' : 'Save'); ?>

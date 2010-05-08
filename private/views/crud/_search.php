@@ -6,7 +6,7 @@
 )); ?>
 
 	<?php
-	foreach($this->modelUtil()->columns AS $column)
+	foreach($model::model()->columns AS $column)
 	{
 		?>
 	<div class="row">

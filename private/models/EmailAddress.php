@@ -1,24 +1,21 @@
 <?php
 
 /**
- * This is the model class for table "phone".
+ * This is the model class for table "email_address".
  */
-class Phone extends Model
+class EmailAddress extends Model
 {
 	/**
-	 * The followings are the available columns in table 'phone':
+	 * The followings are the available columns in table 'email_address':
 	 * @var string $id
-	 * @var string $phone_type_id
-	 * @var integer $area_code
-	 * @var string $phone_number
-	 * @var string $extension
+	 * @var string $email_address
 	 * @var string $created
 	 * @var string $modified
 	 */
 
 	/**
 	 * Returns the static model of the specified AR class.
-	 * @return Phone the static model class
+	 * @return EmailAddress the static model class
 	 */
 	public static function model($className=__CLASS__)
 	{
@@ -30,7 +27,7 @@ class Phone extends Model
 	 */
 	public function tableName()
 	{
-		return 'phone';
+		return 'email_address';
 	}
 
 	/**
@@ -41,14 +38,12 @@ class Phone extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('phone_type_id, area_code, phone_number', 'required'),
-			array('area_code', 'numerical', 'integerOnly'=>true),
-			array('phone_type_id', 'length', 'max'=>20),
-			array('phone_number', 'length', 'max'=>7),
-			array('extension', 'length', 'max'=>10),
+			array('email_address', 'required'),
+			array('email_address', 'unique'),
+			array('email_address', 'length', 'max'=>255),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.
-			array('id, phone_type_id, area_code, phone_number, extension, created, modified', 'safe', 'on'=>'search'),
+			array('id, email_address, created, modified', 'safe', 'on'=>'search'),
 		);
 	}
 
@@ -60,9 +55,7 @@ class Phone extends Model
 		// NOTE: you may need to adjust the relation name and the related
 		// class name for the relations automatically generated below.
 		return array(
-			'companies' => array(self::MANY_MANY, 'Company', 'company_phone(company_id, phone_id)'),
-			'people' => array(self::MANY_MANY, 'Person', 'person_phone(person_id, phone_id)'),
-			'phoneType' => array(self::BELONGS_TO, 'PhoneType', 'phone_type_id'),
+			'people' => array(self::MANY_MANY, 'Person', 'person_email_address(person_id, email_address_id)'),
 		);
 	}
 
@@ -73,10 +66,7 @@ class Phone extends Model
 	{
 		return array(
 			'id' => 'ID',
-			'phone_type_id' => 'Phone Type',
-			'area_code' => 'Area Code',
-			'phone_number' => 'Phone Number',
-			'extension' => 'Extension',
+			'email_address' => 'Email Address',
 			'created' => 'Created',
 			'modified' => 'Modified',
 		);
@@ -95,13 +85,7 @@ class Phone extends Model
 
 		$criteria->compare('id',$this->id,true);
 
-		$criteria->compare('phone_type_id',$this->phone_type_id,true);
-
-		$criteria->compare('area_code',$this->area_code);
-
-		$criteria->compare('phone_number',$this->phone_number,true);
-
-		$criteria->compare('extension',$this->extension,true);
+		$criteria->compare('email_address',$this->email_address,true);
 
 		$criteria->compare('created',$this->created,true);
 

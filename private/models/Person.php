@@ -68,7 +68,20 @@ class Person extends Model
 			'companyEmployees' => array(self::HAS_MANY, 'CompanyEmployee', 'person_id'),
 			'addresses' => array(self::MANY_MANY, 'Address', 'person_address(person_id, address_id)'),
 			'phones' => array(self::MANY_MANY, 'Phone', 'person_phone(person_id, phone_id)'),
+			'email_addresses' => array(self::MANY_MANY, 'Email Address', 'person_email_address(person_id, email_address_id)'),
 			'users' => array(self::HAS_MANY, 'User', 'person_id'),
+		);
+	}
+
+	/**
+	 * @return array relational form rules.
+	 */
+	public function formRelations()
+	{
+		// key value relates to key of relations() array
+		return array(
+			/*'addresses' => array('embed'=>true),
+			'phones' => array('embed'=>true),*/
 		);
 	}
 

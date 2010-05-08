@@ -90,6 +90,17 @@ class User extends Model
 	}
 
 	/**
+	 * @return array relational form rules.
+	 */
+	public function formRelations()
+	{
+		// key value relates to key of relations() array
+		return array(
+			'person' => array('embed'=>true),
+		);
+	}
+
+	/**
 	 * @return array customized attribute labels (name=>label)
 	 */
 	public function attributeLabels()

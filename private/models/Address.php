@@ -70,8 +70,8 @@ class Address extends Model
 			'postalCode' => array(self::BELONGS_TO, 'PostalCode', 'postal_code_id'),
 			'state' => array(self::BELONGS_TO, 'State', 'state_id'),
 			'addressType' => array(self::BELONGS_TO, 'AddressType', 'address_type_id'),
-			'companys' => array(self::MANY_MANY, 'Company', 'company_address(company_id, address_id)'),
-			'persons' => array(self::MANY_MANY, 'Person', 'person_address(person_id, address_id)'),
+			'companies' => array(self::MANY_MANY, 'Company', 'company_address(company_id, address_id)'),
+			'people' => array(self::MANY_MANY, 'Person', 'person_address(person_id, address_id)'),
 		);
 	}
 

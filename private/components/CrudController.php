@@ -6,6 +6,7 @@ class CrudController extends Controller
 	 * @var CActiveRecord the currently loaded data model instance.
 	 */
 	private $_model;
+	public $relatedModels;
 
 	public function init()
 	{
@@ -13,7 +14,8 @@ class CrudController extends Controller
 		if(empty($this->modelName))
 		{
 			throw new CHttpException(404,'The model for this action does not exist.');
-		}#var_dump($this->modelUtil()->getForeignKeys());exit;
+		}
+		$this->relatedModels();
 	}
 
 	public function modelUtil()
@@ -75,8 +77,19 @@ class CrudController extends Controller
 	 */
 	public function actionCreate()
 	{
-		$model=new $this->modelName();
+		$model=new $this->modelName;
 		$this->performAjaxValidation($model);
+
+		/**
+		 * Model instantiation here must be removed, waiting on saveModel method to allow persistence
+		 */
+		if(!empty($this->relatedModels))
+		{
+			foreach($this->relatedModels AS $fModelName=>$fModel)
+			{
+				$this->relatedModels[$fModelName]['model'] = new $fModelName;
+			}
+		}
 
 		if(isset($_POST[$this->modelName]))
 		{
@@ -85,17 +98,16 @@ class CrudController extends Controller
 			$transaction=$model->dbConnection->beginTransaction();
 			try
 			{
-				if($model->save())
-				{
-					$transaction->commit();
-					$this->redirect(array('view','id'=>$model->id));
-				}
+				self::saveModel($model);
+
+				$transaction->commit();
+				$this->redirect(array('view',$this->modelUtil()->primaryKeyCol => $model->primaryKey));
 			}
 			catch(Exception $e)
 			{
 				$transaction->rollBack();
 				echo 'error transaction';
-				print_r($e);exit;
+				print_r($e);
 			}
 		}
 
@@ -121,7 +133,7 @@ class CrudController extends Controller
 				if($model->save())
 				{
 					$transaction->commit();
-					$this->redirect(array('view','id'=>$model->id));
+					$this->redirect(array('view',$this->modelUtil()->primaryKeyCol => $model->primaryKey));
 				}
 			}
 			catch(Exception $e)
@@ -193,8 +205,9 @@ class CrudController extends Controller
 	{
 		if($this->_model===null)
 		{
-			if(isset($_GET['id']))
-				$this->_model=$this->modelUtil()->findbyPk($_GET['id']);
+			$pk = $this->modelUtil()->primaryKeyCol;
+			if(isset($_GET[$pk]))
+				$this->_model=$this->modelUtil()->findbyPk($_GET[$pk]);
 			if($this->_model===null)
 				throw new CHttpException(404,'The requested page does not exist.');
 		}
@@ -216,52 +229,231 @@ class CrudController extends Controller
 	}
 
 	/**
-	 * @todo Make this method MUCH MUCH MUCH more elegant
+	 * @todo Remove if possible, once form generation is restructured
 	 */
-	public function generateField($model, $column, $form = null, $type = 'form')
+	public function relatedModels()
 	{
-		$label = '';
-		$error = '';
+		if(!isset($this->relatedModels))
+		{
+			$this->relatedModels = array();
+			$relations = self::modelRelations($this->modelName);
+			foreach($relations AS $relKey=>$relArray)
+			{
+				if(!empty($relArray['embed']))
+				{
+					$this->relatedModels[$relArray[1]] = array('model'=>null, 'fKey'=>$relArray[2], 'relKey'=>$relKey, 'joinType'=>$relArray[0]);
+				}
+			}
+		}
+
+		return $this->relatedModels;
+	}
+
+	public static function modelRelations($modelName)
+	{
+		return array_merge_recursive($modelName::model()->relations(), $modelName::model()->formRelations());
+	}
+
+	/**
+	 * @todo Ensure models are able to persist for validation & data purposes
+	 */
+	public static function saveModel(&$model, &$relationships = array(), &$valid = true)
+	{
+		$hasChildren = $successful = false;
+		$modelName = get_class($model);
+		$modelRelations = self::modelRelations($modelName);
+		if(!empty($modelRelations))
+		{
+			$modelFKeys = $modelName::model()->foreignKeys;
+			foreach($modelRelations AS $relKey=>$relArray)
+			{
+				$joinType = $relArray[0];
+				$subModelName = $relArray[1];
+				$modelFKey = $relArray[2];
+
+				/**
+				 * Track "relationships" to ensure no endless loops
+				 */
+				$tmp = array($modelName, $subModelName);
+				sort($tmp);
+				if(!empty($_POST[$subModelName]) && !in_array($tmp, $relationships))
+				{
+					switch($joinType)
+					{
+						case $modelName::BELONGS_TO:
+							array_push($relationships, $tmp);
+
+							$subModel = new $subModelName;
+							$subModel->attributes = $_POST[$subModelName];
+							if(self::saveModel($subModel, $relationships, $valid))
+							{
+								$subModelFKey = $modelFKeys[$modelFKey][1];
+								$model->{$modelFKey} = $subModel->{$subModelFKey};
+							}
+							break;
+						case $modelName::HAS_ONE:
+						case $modelName::HAS_MANY:
+						case $modelName::MANY_MANY:
+							$hasChildren = true;
+							continue;
+							break;
+					}
+				}
+			}
+		}
+		$valid = $model->validate() && $valid;
+
+		if($valid)
+		{
+			$successful = $model->save(false);
+
+			if($successful && $hasChildren)
+			{
+				foreach($modelRelations AS $relKey=>$relArray)
+				{
+					$joinType = $relArray[0];
+					$subModelName = $relArray[1];
+					$modelFKey = $relArray[2];
+
+					/**
+					 * Track "relationships" to ensure no endless loops
+					 */
+					$tmp = array($modelName, $subModelName);
+					sort($tmp);
+					if(!empty($_POST[$subModelName]) && !in_array($tmp, $relationships))
+					{
+						switch($joinType)
+						{
+							case $modelName::BELONGS_TO:
+								continue;
+								break;
+							case $modelName::HAS_ONE:
+							case $modelName::HAS_MANY:
+								array_push($relationships, $tmp);
+
+								$subModel = new $subModelName;
+								$subModel->attributes = $_POST[$subModelName];
+								$subModel->{$subModelFKey} = $model->{$modelFKey};
+								self::saveModel($subModel, $relationships, $valid);
+								break;
+							case $modelName::MANY_MANY:
+								array_push($relationships, $tmp);
+
+								$subModel = new $subModelName;
+								$subModel->attributes = $_POST[$subModelName];
+								if(self::saveModel($subModel, $relationships, $valid))
+								{
+									if(preg_match('/^(\w+)\((\w+),(\w+)\)$/', $modelFKey, $match))
+									{
+										$tableName = $match[1];
+										$modelFKey = $match[2];
+										$subModelFKey = $match[3];
+
+										if($valid)
+										{
+											Yii::app()->db->commandBuilder->createInsertCommand($tableName,
+												array(
+												$modelFKey=>$model->$modelFKey,
+												$subModelFKey=>$subModel->$subModelFKey
+												)
+												)->query();
+										}
+									}
+									// else toss error
+								}
+								break;
+						}
+					}
+				}
+			}
+		}
+
+		return $successful;
+	}
+
+	public static function renderField($type, $model, $columnName, $form=null, $err=true, $label=true, $attributes=null, $data=null)
+	{
+		$return = '';
+		if($label)
+		{
+			$return .= self::generateFieldLabel($model, $columnName, $form);
+		}
+		$params = array($model, $columnName);
+
 		switch($type)
 		{
-			case 'form':
-				if(!empty($form))
-				{
-					$label = $form->labelEx($model, $column->name);
-					$error = $form->error($model, $column->name);
-				}else
-				{
-					$label = CHtml::activeLabelEx($model, $column->name);
-					$error = CHtml::activeError($model, $column->name);
-				}
+			case 'dropDownList':
+				array_push($params, $data);
 				break;
-			case 'search':
-				if(!empty($form))
+			case 'textArea':
+				if(empty($attributes))
 				{
-					$label = $form->label($model, $column->name);
-				}else
-				{
-					$label = CHtml::activeLabel($model, $column->name);
+					$attributes = array('rows'=>6, 'cols'=>50);
 				}
+				array_push($params, $attributes);
+				break;
+			case 'checkBox':
+			case 'passwordField':
+			case 'textField':
+			case 'hiddenField':
 				break;
 		}
 
-		$locked = $model->lockedElements();
+		$classRef = !empty($form) ? $form : 'CHtml';
+		$type = !empty($form) ? $type : 'active' . ucfirst($type);
+		$return .= call_user_func_array(array($classRef, $type), $params);
 
+		if(!empty($err))
+		{
+			$return .= self::generateFieldError($model, $columnName, $form);
+		}
+
+		return $return;
+	}
+
+	public static function generateFieldLabel($model, $columnName, $form=null)
+	{
+		if(!empty($form))
+		{
+			return $form->label($model, $columnName);
+		}else
+		{
+			return CHtml::activeLabel($model, $columnName);
+		}
+	}
+
+	public static function generateFieldError($model, $columnName, $form=null)
+	{
+		if(!empty($form))
+		{
+			return $form->error($model, $columnName);
+		}else
+		{
+			return CHtml::activeError($model, $columnName);
+		}
+	}
+
+	/**
+	 * @todo Make this method MUCH MUCH MUCH more elegant
+	 * @todo Restructure to be similar to saveModel method, add support for all relationship types
+	 */
+	public function generateField($model, $column, $form = null, $type = 'form')
+	{
+		$error = true;
+		if($type == 'search')
+		{
+			$error = false;
+		}
+
+		$locked = $model->lockedElements();
 		if(array_key_exists($column->name, $locked))
 		{
 			if(!empty($locked[$column->name]['display']) && isset($model->{$column->name}) && !is_null($model->{$column->name}))
 			{
-				return $label . ': ' . $model->{$column->name} . $error;
+				return self::generateFieldLabel($model, $column->name, $form) . ': ' . $model->{$column->name} . self::generateFieldError($model, $column->name, $form);
 			}else
 			{
-				if(!empty($form))
-				{
-					return $form->hiddenField($model, $column->name);
-				}else
-				{
-					return CHtml::activeHiddenField($model, $column->name);
-				}
+				return self::renderField('hiddenField', $model, $column->name, $form, $error, false);
 			}
 		}
 
@@ -270,53 +462,48 @@ class CrudController extends Controller
 			/**
 			 * ForeignKey stuff here
 			 */
-			$foreignModel = '';
-			foreach($model->relations() AS $relKey=>$relArray)
+			$embedForm = false;
+			$relatedModel = '';
+			$relations = array_merge_recursive($model->relations(), $model->formRelations());
+			foreach($relations AS $relKey=>$relArray)
 			{
 				if(strcmp($relArray[2], $column->name)==0)
 				{
-					$foreignModel = $relArray[1];
+					$relatedModel = $relArray[1];
+					$embedForm = isset($relArray['embed']) ? $relArray['embed'] : false;
 					break;
 				}
 			}
-			$listData = array();
-			if(!empty($foreignModel))
-			{
-				$foreignColumns = $foreignModel::model()->getColumns();
-				$fkId = $model->foreignKeys[$column->name][1];
-				$fkName = 'CONCAT(`' . implode('`, " ", `', $foreignModel::model()->displayColumns($fkId)) . '`) AS modelDisplayField';
-				$cond = array('select'=>array($fkId, $fkName));
-				$listData = CHtml::listData($foreignModel::model()->findAll($cond), $fkId, 'modelDisplayField');
-			}
 
-			if(!empty($form))
+			if(empty($embedForm))
 			{
-				return $label . $form->dropDownList($model, $column->name, $listData) . $error;
+				$listData = array();
+				if(!empty($relatedModel))
+				{
+					$foreignColumns = $relatedModel::model()->getColumns();
+					$fkId = $model->foreignKeys[$column->name][1];
+					$fkName = 'CONCAT(`' . implode('`, " ", `', $relatedModel::model()->displayColumns($fkId)) . '`) AS modelDisplayField';
+					$cond = array('select'=>array($fkId, $fkName));
+					$listData = CHtml::listData($relatedModel::model()->findAll($cond), $fkId, 'modelDisplayField');
+				}
+
+				return self::renderField('dropDownList', $model, $column->name, $form, $error, true, null, $listData);
 			}else
 			{
-				return $label . CHtml::activeDropDownList($model, $column->name, $listData) . $error;
+				/**
+				 * Build sub-form
+				 */
+				return $this->renderPartial('/crud/_formElements', array('model'=>$this->relatedModels[$relatedModel]['model'], 'form'=>$form));
 			}
 		}else
 		{
 			if($column->type==='boolean' || ($column->type == 'integer' && $column->size == 1))
 			{
-				if(!empty($form))
-				{
-					return $label . $form->checkBox($model, $column->name) . $error;
-				}else
-				{
-					return $label . CHtml::activeCheckBox($model, $column->name) . $error;
-				}
+				return self::renderField('checkBox', $model, $column->name, $form, $error, true);
 			}
 			else if(stripos($column->dbType,'text')!==false)
 			{
-				if(!empty($form))
-				{
-					return $label . $form->textArea($model, $column->name, array('rows'=>6, 'cols'=>50)) . $error;
-				}else
-				{
-					return $label . CHtml::activeTextArea($model, $column->name, array('rows'=>6, 'cols'=>50)) . $error;
-				}
+				return self::renderField('textArea', $model, $column->name, $form, $error, true);
 			}
 			else
 			{
@@ -331,14 +518,7 @@ class CrudController extends Controller
 
 				if($column->type!=='string' || $column->size===null)
 				{
-					if(!empty($form))
-					{
-						return $label . $form->{$inputField}($model, $column->name) . $error;
-					}else
-					{
-						$inputField = 'active' . ucfirst($inputField);
-						return $label . CHtml::$inputField($model, $column->name) . $error;
-					}
+					return self::renderField($inputField, $model, $column->name, $form, $error, true);
 				}
 				else
 				{
@@ -353,13 +533,7 @@ class CrudController extends Controller
 							$listData = range(date('Y'), 1900);
 							$listData = array_combine($listData, $listData);
 
-							if(!empty($form))
-							{
-								return $label . $form->dropDownList($model, $column->name, $listData) . $error;
-							}else
-							{
-								return $label . CHtml::activeDropDownList($model, $column->name, $listData) . $error;
-							}
+							return self::renderField('dropDownList', $model, $column->name, $form, $error, true, null, $listData);
 
 							break;
 						default:
@@ -368,27 +542,14 @@ class CrudController extends Controller
 								$listData = str_getcsv($match[1], ',', "'");
 								$listData = array_combine($listData, $listData);
 
-								if(!empty($form))
-								{
-									return $label . $form->dropDownList($model, $column->name, $listData) . $error;
-								}else
-								{
-									return $label . CHtml::activeDropDownList($model, $column->name, $listData) . $error;
-								}
+								return self::renderField('dropDownList', $model, $column->name, $form, $error, true, null, $listData);
 							}
 							break;
 					}
 
 					if(($size=$maxLength=$column->size)>60)
 						$size=60;
-					if(!empty($form))
-					{
-						return $label . $form->{$inputField}($model, $column->name, array('size'=>$size,'maxlength'=>$maxLength)) . $error;
-					}else
-					{
-						$inputField = 'active' . ucfirst($inputField);
-						return $label . CHtml::$inputField($model, $column->name, array('size'=>$size,'maxlength'=>$maxLength)) . $error;
-					}
+					return self::renderField($inputField, $model, $column->name, $form, $error, true, array('size'=>$size,'maxlength'=>$maxLength));
 				}
 			}
 		}

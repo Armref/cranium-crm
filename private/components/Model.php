@@ -28,6 +28,11 @@ class Model extends CActiveRecord
 		return $this->tableSchema->primaryKey;
 	}
 
+	public function formRelations()
+	{
+		return array();
+	}
+
 	public function displayLabel()
 	{
 		$displayCols = $this->displayColumns();

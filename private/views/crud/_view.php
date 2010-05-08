@@ -1,22 +1,23 @@
 <div class="view">
 
 	<?php
+	$model = $data;
 	$pkLabel = array();
 	$pkValue = array();
 	$pkRoute = array('view');
-	if(is_array($this->modelUtil()->primaryKeyCol))
+	if(is_array($model::model()->primaryKeyCol))
 	{
-		foreach($this->modelUtil()->primaryKeyCol AS $pk)
+		foreach($model::model()->primaryKeyCol AS $pk)
 		{
 			$pkLabel[] = $data->getAttributeLabel($pk);
 			$pkValue[] = $data->$pk;
 			$pkRoute[$pk] = $data->$pk;
 		}
 	}else{
-		$pk = $this->modelUtil()->primaryKeyCol;
+		$pk = $model::model()->primaryKeyCol;
 		$pkLabel[] = $data->getAttributeLabel($pk);
 		$pkValue[] = $data->$pk;
-		$pkRoute[$this->modelUtil()->primaryKeyCol] = $data->$pk;
+		$pkRoute[$model::model()->primaryKeyCol] = $data->$pk;
 	}
 	$pkLabel = implode('/', $pkLabel);
 	$pkValue = implode('/', $pkValue);
@@ -28,7 +29,7 @@
 	?>
 
 	<?php
-	foreach($this->modelUtil()->columns AS $column)
+	foreach($model::model()->columns AS $column)
 	{
 		if($column->isPrimaryKey)
 		{
