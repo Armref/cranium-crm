@@ -8,11 +8,20 @@
 	<?php
 	foreach($model::model()->columns AS $column)
 	{
+		$embedded = false;
+		$row = $this->generateField($model, $column, $form, 'search', $embedded);
+
+		if(empty($embedded))
+		{
 		?>
 	<div class="row">
-		<?php echo $this->generateField($model, $column, $form, 'search'); ?>
+		<?php echo $row; ?>
 	</div>
 		<?php
+		}else
+		{
+			echo $row;
+		}
 	}
 	?>
 

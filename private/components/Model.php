@@ -2,11 +2,23 @@
 /**
  * Extending CActiveRecord to add common functionality to all models
  * @todo Clean up get* functions, so they don't interfere with model objects
+ * @todo Build search() method that is dynamic, and allows for filtering by associated models
  */
 class Model extends CActiveRecord
 {
 	public $modelDisplayField;
 	private $_oldAttributes = array();
+	private $_id;
+
+	public function getModelId()
+	{
+		if(empty($this->_id))
+		{
+			$this->_id = get_class($this);
+		}
+
+		return $this->_id;
+	}
 
 	public function displayFields()
 	{

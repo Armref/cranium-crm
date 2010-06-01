@@ -2,16 +2,12 @@
 /**
  * @todo Add support for generating elements w/out $form variable
  */
-foreach($model::model()->columns AS $column)
-{
-	if($column->isPrimaryKey)
-	{
-		continue;
-	}
-	?>
+$displayField = function($content) {
+	return '
 <div class="row">
-	<?php echo $this->generateField($model, $column, $form); ?>
+	' . $content . '
 </div>
-	<?php
-}
-?>
+	';
+};
+
+echo $this->buildForm($model, $form, $displayField);

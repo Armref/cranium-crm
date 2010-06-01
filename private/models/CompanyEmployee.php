@@ -42,12 +42,12 @@ class CompanyEmployee extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('person_id, company_id, position, lft, rgt', 'required'),
+			array('person_id, company_id, position'/*, lft, rgt'*/, 'required'),
 			array('person_id, company_id, lft, rgt', 'length', 'max'=>20),
 			array('position', 'length', 'max'=>128),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.
-			array('id, person_id, company_id, position, lft, rgt, created, modified', 'safe', 'on'=>'search'),
+			array('id, person_id, company_id, position, created, modified', 'safe', 'on'=>'search'),
 		);
 	}
 
@@ -100,10 +100,6 @@ class CompanyEmployee extends Model
 		$criteria->compare('company_id',$this->company_id,true);
 
 		$criteria->compare('position',$this->position,true);
-
-		$criteria->compare('lft',$this->lft,true);
-
-		$criteria->compare('rgt',$this->rgt,true);
 
 		$criteria->compare('created',$this->created,true);
 

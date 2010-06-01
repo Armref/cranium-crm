@@ -42,13 +42,13 @@ class Account extends Model
 		// NOTE: you should only define rules for those attributes that
 		// will receive user inputs.
 		return array(
-			array('account_name, company_id, lft, rgt', 'required'),
+			array('account_name, company_id'/*, lft, rgt'*/, 'required'),
 			array('account_name', 'length', 'max'=>128),
 			array('company_id, lft, rgt', 'length', 'max'=>20),
 			array('company_num', 'length', 'max'=>100),
 			// The following rule is used by search().
 			// Please remove those attributes that should not be searched.
-			array('id, account_name, company_id, lft, rgt, company_num, created, modified', 'safe', 'on'=>'search'),
+			array('id, account_name, company_id, company_num, created, modified', 'safe', 'on'=>'search'),
 		);
 	}
 
@@ -98,10 +98,6 @@ class Account extends Model
 		$criteria->compare('account_name',$this->account_name,true);
 
 		$criteria->compare('company_id',$this->company_id,true);
-
-		$criteria->compare('lft',$this->lft,true);
-
-		$criteria->compare('rgt',$this->rgt,true);
 
 		$criteria->compare('company_num',$this->company_num,true);
 

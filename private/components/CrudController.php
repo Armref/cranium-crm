@@ -7,6 +7,7 @@ class CrudController extends Controller
 	 */
 	private $_model;
 	public $relatedModels;
+	private $_persistentModels = array();
 
 	public function init()
 	{
@@ -37,13 +38,14 @@ class CrudController extends Controller
 	/**
 	 * Specifies the access control rules.
 	 * This method is used by the 'accessControl' filter.
+	 * @todo Secure the "list" action so that it only works for ajax requests
 	 * @return array access control rules
 	 */
 	public function accessRules()
 	{
 		return array(
 			array('allow',  // allow all users to perform 'index' and 'view' actions
-				'actions'=>array('index','view'),
+				'actions'=>array('index','view','list'),
 				'users'=>array('*'),
 			),
 			array('allow', // allow authenticated user to perform 'create' and 'update' actions
@@ -77,19 +79,8 @@ class CrudController extends Controller
 	 */
 	public function actionCreate()
 	{
-		$model=new $this->modelName;
+		$model = $this->loadPersistentModel($this->modelName);
 		$this->performAjaxValidation($model);
-
-		/**
-		 * Model instantiation here must be removed, waiting on saveModel method to allow persistence
-		 */
-		if(!empty($this->relatedModels))
-		{
-			foreach($this->relatedModels AS $fModelName=>$fModel)
-			{
-				$this->relatedModels[$fModelName]['model'] = new $fModelName;
-			}
-		}
 
 		if(isset($_POST[$this->modelName]))
 		{
@@ -98,7 +89,7 @@ class CrudController extends Controller
 			$transaction=$model->dbConnection->beginTransaction();
 			try
 			{
-				self::saveModel($model);
+				$this->saveModel($model);
 
 				$transaction->commit();
 				$this->redirect(array('view',$this->modelUtil()->primaryKeyCol => $model->primaryKey));
@@ -119,6 +110,7 @@ class CrudController extends Controller
 	/**
 	 * Updates a particular model.
 	 * If update is successful, the browser will be redirected to the 'view' page.
+	 * @todo modify to work similar to Create method
 	 */
 	public function actionUpdate()
 	{
@@ -198,6 +190,31 @@ class CrudController extends Controller
 	}
 
 	/**
+	 * Add support for multiple PKs
+	 * @todo add security method to avoid listing passwords, for instance
+	 * @todo implement extension for filtering, found here: http://www.yiiframework.com/extension/jquery-cascade/
+	 */
+	public function actionList()
+	{
+		if(Yii::app()->request->isAjaxRequest)
+		{
+			$objects = $this->modelUtil()->findAllByAttributes($_GET);
+			$return = array();
+
+			foreach($objects as $object)
+			{
+				$return[] = array('label' => $object->displayLabel(), 'value' => $object->primaryKey);
+			}
+
+			echo json_encode($return);
+			Yii::app()->end();
+		}else
+		{
+			throw new CHttpException(400,'Invalid request. Please do not repeat this request again.');
+		}
+	}
+
+	/**
 	 * Returns the data model based on the primary key given in the GET variable.
 	 * If the data model is not found, an HTTP exception will be raised.
 	 */
@@ -212,6 +229,16 @@ class CrudController extends Controller
 				throw new CHttpException(404,'The requested page does not exist.');
 		}
 		return $this->_model;
+	}
+
+	public function loadPersistentModel($modelName)
+	{
+		if(!in_array($modelName, $this->_persistentModels))
+		{
+			$this->_persistentModels[$modelName] = new $modelName;
+		}
+
+		return $this->_persistentModels[$modelName];
 	}
 
 	/**
@@ -257,7 +284,7 @@ class CrudController extends Controller
 	/**
 	 * @todo Ensure models are able to persist for validation & data purposes
 	 */
-	public static function saveModel(&$model, &$relationships = array(), &$valid = true)
+	public function saveModel(&$model, &$relationships = array(), &$valid = true)
 	{
 		$hasChildren = $successful = false;
 		$modelName = get_class($model);
@@ -283,9 +310,9 @@ class CrudController extends Controller
 						case $modelName::BELONGS_TO:
 							array_push($relationships, $tmp);
 
-							$subModel = new $subModelName;
+							$subModel = $this->loadPersistentModel($subModelName);
 							$subModel->attributes = $_POST[$subModelName];
-							if(self::saveModel($subModel, $relationships, $valid))
+							if($this->saveModel($subModel, $relationships, $valid))
 							{
 								$subModelFKey = $modelFKeys[$modelFKey][1];
 								$model->{$modelFKey} = $subModel->{$subModelFKey};
@@ -331,17 +358,17 @@ class CrudController extends Controller
 							case $modelName::HAS_MANY:
 								array_push($relationships, $tmp);
 
-								$subModel = new $subModelName;
+								$subModel = $this->loadPersistentModel($subModelName);
 								$subModel->attributes = $_POST[$subModelName];
 								$subModel->{$subModelFKey} = $model->{$modelFKey};
-								self::saveModel($subModel, $relationships, $valid);
+								$this->saveModel($subModel, $relationships, $valid);
 								break;
 							case $modelName::MANY_MANY:
 								array_push($relationships, $tmp);
 
-								$subModel = new $subModelName;
+								$subModel = $this->loadPersistentModel($subModelName);
 								$subModel->attributes = $_POST[$subModelName];
-								if(self::saveModel($subModel, $relationships, $valid))
+								if($this->saveModel($subModel, $relationships, $valid))
 								{
 									if(preg_match('/^(\w+)\((\w+),(\w+)\)$/', $modelFKey, $match))
 									{
@@ -433,11 +460,138 @@ class CrudController extends Controller
 		}
 	}
 
+	public function buildForm(&$model, $form = null, $displayField = null, $skipPrimary = true)
+	{
+		if(empty($displayField))
+		{
+			$displayField = function($content)
+				{
+					return $content;
+				};
+		}
+
+		$hasChildren = $successful = false;
+		$modelName = get_class($model);
+		$modelRelations = self::modelRelations($modelName);
+		if(!empty($modelRelations))
+		{
+			$modelFKeys = $modelName::model()->foreignKeys;
+		}
+
+		$output = '';
+		foreach($model::model()->columns AS $column)
+		{
+			if($column->isPrimaryKey)
+			{
+				continue;
+			}
+
+			$embedded = false;
+			$_output = $this->generateField($model, $column, $form, null, $embedded);
+
+			/**
+			 * @todo check for column as foreign key, if so, render dropdown or subform
+			 * @todo add loop after columns to render other subforms
+			 */
+			if(!empty($embedded))
+			{
+				$output .= $_output;
+			}else
+			{
+				$output .= $displayField($_output);
+			}
+		}
+
+		return $output;
+	}
+
+	public function detailColumns($model, $relation = null)
+	{
+		return $this->viewColumns('detail', $model, $relation);
+	}
+
+	public function gridColumns($model, $relation = null)
+	{
+		return $this->viewColumns('grid', $model, $relation);
+	}
+
+	public function viewColumns($type='grid', $model, $relation = null)
+	{
+		$columns = array();
+		foreach($model->getColumns() AS $column)
+		{
+			/**
+			 * @todo Implement column display control by model
+			 */
+			if(preg_match('/password/i', $column->name))
+			{
+				continue;
+			}
+
+			/**
+			 * If is a nested model
+			 */
+			if(!empty($relation))
+			{
+				if($column->isPrimaryKey || array_key_exists($column->name, $model->lockedElements()))
+				{
+					continue;
+				}
+			}
+
+			$nestedColumn = true;
+			if($column->isForeignKey)
+			{
+				$relations = self::modelRelations($model->modelId);
+				foreach($relations AS $relKey=>$relArray)
+				{
+					if(strcmp($relArray[2], $column->name)==0)
+					{
+						$relatedModel = $relArray[1];
+						if(!empty($relatedModel))
+						{
+							$nestedColumn = false;
+							if(empty($relArray['embed']))
+							{
+								$_col = array(
+									'name'=>$relKey,
+								);
+
+								switch($type)
+								{
+									case 'detail':
+										$_col['value'] = $model->{$relKey}->displayLabel();
+										break;
+									case 'grid':
+										$_col['value'] = '$data->' . $relKey . '->displayLabel()';
+										break;
+								}
+
+								$columns[] = $_col;
+							}else
+							{
+								$columns = array_merge($columns, $this->viewColumns($type, $relatedModel::model(), $relKey));
+							}
+						}
+						break;
+					}
+				}
+			}
+
+			if(!empty($nestedColumn))
+			{
+				$columns[] = (!empty($relation) ? $relation . '.' : '') . $column->name;
+			}
+		}
+
+		return $columns;
+	}
+
 	/**
 	 * @todo Make this method MUCH MUCH MUCH more elegant
 	 * @todo Restructure to be similar to saveModel method, add support for all relationship types
 	 */
-	public function generateField($model, $column, $form = null, $type = 'form')
+	public function generateField($model, $column, $form = null, $type = 'form', &$embedded = false)
 	{
 		$error = true;
 		if($type == 'search')
@@ -464,7 +618,7 @@ class CrudController extends Controller
 			 */
 			$embedForm = false;
 			$relatedModel = '';
-			$relations = array_merge_recursive($model->relations(), $model->formRelations());
+			$relations = self::modelRelations($model->modelId);
 			foreach($relations AS $relKey=>$relArray)
 			{
 				if(strcmp($relArray[2], $column->name)==0)
@@ -490,10 +644,12 @@ class CrudController extends Controller
 				return self::renderField('dropDownList', $model, $column->name, $form, $error, true, null, $listData);
 			}else
 			{
+				$embedded = true;
+
 				/**
 				 * Build sub-form
 				 */
-				return $this->renderPartial('/crud/_formElements', array('model'=>$this->relatedModels[$relatedModel]['model'], 'form'=>$form));
+				return $this->renderPartial('/crud/_formElements', array('model'=>$relatedModel::model(), 'form'=>$form));
 			}
 		}else
 		{

@@ -38,10 +38,7 @@ or <b>=</b>) at the beginning of each of your search values to specify how the c
 </div><!-- search-form -->
 
 <?php
-$columns = array();
-foreach($this->modelUtil()->columns AS $column=>$colAttr) {
-	$columns[] = $column;
-}
+$columns = $this->gridColumns($model);
 $columns[] = array('class'=>'CButtonColumn');
 
 $this->widget('zii.widgets.grid.CGridView', array(

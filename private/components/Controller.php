@@ -114,12 +114,24 @@ class Controller extends CController
 
 	public function getSingularName()
 	{
-		return $this->singularize(ucwords($this->id));
+		return $this->singularize(ucwords($this->filenameToWords($this->id)));
 	}
 
 	public function getPluralName()
 	{
-		return $this->pluralize(ucwords($this->id));
+		return $this->pluralize(ucwords($this->filenameToWords($this->id)));
+	}
+
+	public function filenameToArray($string)
+	{
+		$string = str_replace('Controller.php', '', $string);
+		$string = str_replace('.php', '', $string);
+		return preg_split('/(?<=[a-z])(?=[A-Z])/', $string);
+	}
+
+	public function filenameToWords($string)
+	{
+		return implode(' ', $this->filenameToArray($string));
 	}
 
 	public function pluralize($string) {

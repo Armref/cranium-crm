@@ -16,10 +16,7 @@ $this->menu=array(
 <h1>View <?php echo $this->singularName; ?> #<?php echo $model->id; ?></h1>
 
 <?php
-$columns = array();
-foreach($this->modelUtil()->columns AS $column=>$colAttr) {
-	$columns[] = $column;
-}
+$columns = $this->detailColumns($model);
 
 $this->widget('zii.widgets.CDetailView', array(
 	'data'=>$model,

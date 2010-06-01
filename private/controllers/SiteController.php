@@ -97,8 +97,8 @@ class SiteController extends Controller
 			{
 				continue;
 			}
-            $clink = $cname = preg_split('/(?<=[a-z])(?=[A-Z])/', str_replace('Controller.php', '', basename($file)));
-			if($clink[0] == 'Site')
+            $clink = $cname = $this->filenameToArray(basename($file));
+			if(strcasecmp($clink[0],$this->id)==0)
 				continue;
 			
             $clink[0] = strtolower($clink[0]);
